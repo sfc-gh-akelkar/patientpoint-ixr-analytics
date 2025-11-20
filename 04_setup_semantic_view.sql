@@ -74,110 +74,110 @@ CREATE OR REPLACE SEMANTIC VIEW PATIENT_IMPACT_SEMANTIC_VIEW
   DIMENSIONS (
     -- Provider dimensions
     provider_dim.provider_specialty AS provider_dim.SPECIALTY
-      SYNONYMS ('medical specialty', 'provider specialty', 'doctor specialty', 'practice type'),
+      WITH SYNONYMS = ('medical specialty', 'provider specialty', 'doctor specialty', 'practice type'),
     
     provider_dim.provider_region AS provider_dim.REGION
-      SYNONYMS ('geographic region', 'location', 'area'),
+      WITH SYNONYMS = ('geographic region', 'location', 'area'),
     
     provider_dim.provider_active_status AS provider_dim.IS_ACTIVE
-      SYNONYMS ('active status', 'active provider', 'provider status', 'churned', 'retained'),
+      WITH SYNONYMS = ('active status', 'active provider', 'provider status', 'churned', 'retained'),
     
     -- Impact analysis dimensions
     impact_analysis.specialty AS impact_analysis.SPECIALTY
-      SYNONYMS ('medical specialty', 'provider type', 'specialty type'),
+      WITH SYNONYMS = ('medical specialty', 'provider type', 'specialty type'),
     
     impact_analysis.region AS impact_analysis.REGION
-      SYNONYMS ('geographic region', 'location'),
+      WITH SYNONYMS = ('geographic region', 'location'),
     
     impact_analysis.provider_is_active AS impact_analysis.PROVIDER_IS_ACTIVE
-      SYNONYMS ('active', 'churned', 'retention status', 'provider churn'),
+      WITH SYNONYMS = ('active', 'churned', 'retention status', 'provider churn'),
     
     impact_analysis.engagement_level AS impact_analysis.ENGAGEMENT_LEVEL
-      SYNONYMS ('engagement category', 'interaction level', 'engagement tier'),
+      WITH SYNONYMS = ('engagement category', 'interaction level', 'engagement tier'),
     
     -- Time dimension with synonyms
     impact_analysis.reporting_month AS impact_analysis.OUTCOME_MONTH
-      SYNONYMS ('month', 'time period', 'date', 'reporting month')
+      WITH SYNONYMS = ('month', 'time period', 'date', 'reporting month')
   )
   
   -- Define metrics (aggregated measures)
   METRICS (
     -- Provider counts
     provider_dim.provider_count AS COUNT(DISTINCT provider_dim.NPI)
-      SYNONYMS ('number of providers', 'provider count', 'total providers', 'how many providers')
-      DESCRIPTION 'Total number of unique providers',
+      WITH SYNONYMS = ('number of providers', 'provider count', 'total providers', 'how many providers')
+      WITH DESCRIPTION = 'Total number of unique providers',
     
     provider_dim.active_provider_count AS COUNT(DISTINCT CASE WHEN provider_dim.IS_ACTIVE = TRUE THEN provider_dim.NPI END)
-      SYNONYMS ('active providers', 'retained providers')
-      DESCRIPTION 'Number of active (non-churned) providers',
+      WITH SYNONYMS = ('active providers', 'retained providers')
+      WITH DESCRIPTION = 'Number of active (non-churned) providers',
     
     -- Engagement metrics (aggregated)
     impact_analysis.total_engagement_events AS SUM(impact_analysis.TOTAL_INTERACTIONS)
-      SYNONYMS ('total interactions', 'interaction count', 'engagement events')
-      DESCRIPTION 'Total number of patient interactions with digital screens',
+      WITH SYNONYMS = ('total interactions', 'interaction count', 'engagement events')
+      WITH DESCRIPTION = 'Total number of patient interactions with digital screens',
     
     impact_analysis.avg_dwell_time AS AVG(impact_analysis.AVG_DWELL_TIME_SEC)
-      SYNONYMS ('dwell time', 'time spent', 'viewing time', 'engagement time', 'screen time')
-      DESCRIPTION 'Average time patients spent viewing content in seconds',
+      WITH SYNONYMS = ('dwell time', 'time spent', 'viewing time', 'engagement time', 'screen time')
+      WITH DESCRIPTION = 'Average time patients spent viewing content in seconds',
     
     impact_analysis.avg_clicks AS AVG(impact_analysis.AVG_CLICK_COUNT)
-      SYNONYMS ('clicks', 'click count', 'interactions', 'number of clicks', 'user clicks')
-      DESCRIPTION 'Average number of clicks per interaction',
+      WITH SYNONYMS = ('clicks', 'click count', 'interactions', 'number of clicks', 'user clicks')
+      WITH DESCRIPTION = 'Average number of clicks per interaction',
     
     impact_analysis.avg_scroll_depth AS AVG(impact_analysis.AVG_SCROLL_DEPTH_PCT)
-      SYNONYMS ('scrolling', 'scroll depth', 'scroll percentage', 'how far scrolled', 'content consumption', 'reading depth')
-      DESCRIPTION 'Average percentage of content scrolled through (0-100%)',
+      WITH SYNONYMS = ('scrolling', 'scroll depth', 'scroll percentage', 'how far scrolled', 'content consumption', 'reading depth')
+      WITH DESCRIPTION = 'Average percentage of content scrolled through (0-100%)',
     
     impact_analysis.max_scroll AS MAX(impact_analysis.MAX_SCROLL_DEPTH_PCT)
-      SYNONYMS ('maximum scroll', 'deepest scroll', 'max scroll depth')
-      DESCRIPTION 'Maximum scroll depth achieved',
+      WITH SYNONYMS = ('maximum scroll', 'deepest scroll', 'max scroll depth')
+      WITH DESCRIPTION = 'Maximum scroll depth achieved',
     
     impact_analysis.total_dwell_time AS SUM(impact_analysis.TOTAL_DWELL_TIME_SEC)
-      SYNONYMS ('total time spent', 'cumulative time', 'total viewing time')
-      DESCRIPTION 'Total cumulative dwell time across all interactions',
+      WITH SYNONYMS = ('total time spent', 'cumulative time', 'total viewing time')
+      WITH DESCRIPTION = 'Total cumulative dwell time across all interactions',
     
     impact_analysis.total_click_volume AS SUM(impact_analysis.TOTAL_CLICKS)
-      SYNONYMS ('total clicks', 'click volume', 'cumulative clicks')
-      DESCRIPTION 'Total number of clicks across all interactions',
+      WITH SYNONYMS = ('total clicks', 'click volume', 'cumulative clicks')
+      WITH DESCRIPTION = 'Total number of clicks across all interactions',
     
     impact_analysis.avg_engagement_score AS AVG(impact_analysis.ENGAGEMENT_SCORE)
-      SYNONYMS ('engagement score', 'engagement index', 'interaction score')
-      DESCRIPTION 'Composite engagement score from scroll, clicks, and dwell time',
+      WITH SYNONYMS = ('engagement score', 'engagement index', 'interaction score')
+      WITH DESCRIPTION = 'Composite engagement score from scroll, clicks, and dwell time',
     
     -- Clinical outcome metrics (aggregated)
     impact_analysis.total_vaccines AS SUM(impact_analysis.VACCINES_ADMINISTERED)
-      SYNONYMS ('vaccines', 'vaccinations', 'shots', 'immunizations', 'vaccine count', 'shots given')
-      DESCRIPTION 'Total number of vaccines administered to patients',
+      WITH SYNONYMS = ('vaccines', 'vaccinations', 'shots', 'immunizations', 'vaccine count', 'shots given')
+      WITH DESCRIPTION = 'Total number of vaccines administered to patients',
     
     impact_analysis.avg_vaccines_per_provider AS AVG(impact_analysis.VACCINES_ADMINISTERED)
-      SYNONYMS ('average vaccines', 'vaccines per provider', 'mean vaccinations')
-      DESCRIPTION 'Average number of vaccines administered per provider per month',
+      WITH SYNONYMS = ('average vaccines', 'vaccines per provider', 'mean vaccinations')
+      WITH DESCRIPTION = 'Average number of vaccines administered per provider per month',
     
     impact_analysis.total_screenings AS SUM(impact_analysis.SCREENINGS_COMPLETED)
-      SYNONYMS ('screenings', 'preventative screenings', 'health screenings', 'screening tests', 'preventive care')
-      DESCRIPTION 'Total number of preventative health screenings completed',
+      WITH SYNONYMS = ('screenings', 'preventative screenings', 'health screenings', 'screening tests', 'preventive care')
+      WITH DESCRIPTION = 'Total number of preventative health screenings completed',
     
     impact_analysis.avg_screenings_per_provider AS AVG(impact_analysis.SCREENINGS_COMPLETED)
-      SYNONYMS ('average screenings', 'screenings per provider', 'mean screenings')
-      DESCRIPTION 'Average number of screenings completed per provider per month',
+      WITH SYNONYMS = ('average screenings', 'screenings per provider', 'mean screenings')
+      WITH DESCRIPTION = 'Average number of screenings completed per provider per month',
     
     impact_analysis.avg_show_rate AS AVG(impact_analysis.APPOINTMENT_SHOW_RATE)
-      SYNONYMS ('show rate', 'appointment adherence', 'no-show rate', 'attendance rate', 'kept appointments')
-      DESCRIPTION 'Average rate of patients showing up for scheduled appointments',
+      WITH SYNONYMS = ('show rate', 'appointment adherence', 'no-show rate', 'attendance rate', 'kept appointments')
+      WITH DESCRIPTION = 'Average rate of patients showing up for scheduled appointments',
     
     -- Efficiency metrics
     impact_analysis.avg_vaccine_efficiency AS AVG(impact_analysis.VACCINES_PER_INTERACTION)
-      SYNONYMS ('vaccine efficiency', 'vaccines per engagement', 'vaccination rate')
-      DESCRIPTION 'Average vaccines administered per patient interaction',
+      WITH SYNONYMS = ('vaccine efficiency', 'vaccines per engagement', 'vaccination rate')
+      WITH DESCRIPTION = 'Average vaccines administered per patient interaction',
     
     impact_analysis.avg_screening_efficiency AS AVG(impact_analysis.SCREENINGS_PER_INTERACTION)
-      SYNONYMS ('screening efficiency', 'screenings per engagement', 'screening rate')
-      DESCRIPTION 'Average screenings completed per patient interaction',
+      WITH SYNONYMS = ('screening efficiency', 'screenings per engagement', 'screening rate')
+      WITH DESCRIPTION = 'Average screenings completed per patient interaction',
     
     -- Retention metrics
     impact_analysis.retention_rate AS AVG(CASE WHEN impact_analysis.PROVIDER_IS_ACTIVE = TRUE THEN 100.0 ELSE 0.0 END)
-      SYNONYMS ('retention rate', 'churn rate', 'provider retention', 'active rate')
-      DESCRIPTION 'Percentage of providers who remain active (not churned)'
+      WITH SYNONYMS = ('retention rate', 'churn rate', 'provider retention', 'active rate')
+      WITH DESCRIPTION = 'Percentage of providers who remain active (not churned)'
   )
 ;
 
