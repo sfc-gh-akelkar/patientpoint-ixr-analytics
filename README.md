@@ -293,7 +293,7 @@ Low              |      22.8  |        27.4  |   2000
 
 ---
 
-## McKinsey-Level Deliverables
+## Key Deliverables
 
 This PoC provides:
 
