@@ -1,0 +1,491 @@
+---
+# ============================================================================
+# Patient Point IXR Analytics - Semantic Model for Cortex Analyst
+# ============================================================================
+# Description: Defines the semantic layer that enables natural language 
+#              queries over patient engagement and clinical outcome data
+# ============================================================================
+
+name: "Patient Point Impact Analysis"
+description: "Semantic model for analyzing the relationship between digital screen engagement (IXR metrics) and clinical outcomes (vaccinations, screenings, appointment adherence) in medical offices."
+
+tables:
+  # ==========================================================================
+  # Provider Dimension Table
+  # ==========================================================================
+  - name: PROVIDER_DIM
+    description: "Master dimension table containing provider demographics and practice information"
+    base_table:
+      database: PATIENTPOINT_DB
+      schema: IXR_ANALYTICS
+      table: PROVIDER_DIM
+    dimensions:
+      - name: NPI
+        synonyms:
+          - "provider id"
+          - "provider identifier"
+          - "NPI number"
+          - "provider NPI"
+        description: "National Provider Identifier - unique provider ID"
+        data_type: TEXT
+        unique: true
+        
+      - name: PROVIDER_NAME
+        synonyms:
+          - "provider name"
+          - "doctor name"
+          - "physician name"
+        description: "Provider's full name"
+        data_type: TEXT
+        
+      - name: SPECIALTY
+        synonyms:
+          - "medical specialty"
+          - "provider specialty"
+          - "doctor specialty"
+          - "practice type"
+        description: "Medical specialty (e.g., Cardiology, PCP, Dermatology)"
+        data_type: TEXT
+        sample_values:
+          - "Cardiology"
+          - "PCP"
+          - "Dermatology"
+          - "Orthopedics"
+          - "Pediatrics"
+        
+      - name: REGION
+        synonyms:
+          - "geographic region"
+          - "location"
+          - "area"
+        description: "Geographic region of the provider practice"
+        data_type: TEXT
+        sample_values:
+          - "Northeast"
+          - "Southeast"
+          - "Midwest"
+          - "West"
+          - "Southwest"
+        
+      - name: IS_ACTIVE
+        synonyms:
+          - "active status"
+          - "active provider"
+          - "provider status"
+          - "churned"
+          - "retained"
+        description: "Whether the provider is currently active (TRUE) or has churned (FALSE)"
+        data_type: BOOLEAN
+
+  # ==========================================================================
+  # Impact Analysis View - Core Analytical Table
+  # ==========================================================================
+  - name: V_IMPACT_ANALYSIS
+    description: "Pre-joined analytical view combining provider engagement metrics with clinical outcomes at monthly granularity. This is the primary table for analyzing the impact of digital engagement on healthcare outcomes."
+    base_table:
+      database: PATIENTPOINT_DB
+      schema: IXR_ANALYTICS
+      table: V_IMPACT_ANALYSIS
+      
+    dimensions:
+      - name: PROVIDER_NPI
+        synonyms:
+          - "provider"
+          - "provider id"
+          - "NPI"
+          - "doctor"
+        description: "National Provider Identifier"
+        data_type: TEXT
+        
+      - name: PROVIDER_NAME
+        synonyms:
+          - "provider name"
+          - "doctor name"
+        description: "Name of the healthcare provider"
+        data_type: TEXT
+        
+      - name: SPECIALTY
+        synonyms:
+          - "medical specialty"
+          - "provider type"
+          - "specialty type"
+        description: "Provider's medical specialty"
+        data_type: TEXT
+        
+      - name: REGION
+        synonyms:
+          - "geographic region"
+          - "location"
+        description: "Geographic region"
+        data_type: TEXT
+        
+      - name: PROVIDER_IS_ACTIVE
+        synonyms:
+          - "active"
+          - "churned"
+          - "retention status"
+          - "provider churn"
+        description: "Provider retention status - TRUE if active, FALSE if churned"
+        data_type: BOOLEAN
+        
+      - name: OUTCOME_MONTH
+        synonyms:
+          - "month"
+          - "time period"
+          - "date"
+          - "reporting month"
+        description: "Month of the clinical outcomes"
+        data_type: DATE
+        
+      - name: OUTCOME_YEAR
+        synonyms:
+          - "year"
+        description: "Year of the outcomes"
+        data_type: NUMBER
+        
+      - name: OUTCOME_MONTH_NAME
+        synonyms:
+          - "month name"
+        description: "Name of the month (e.g., January, February)"
+        data_type: TEXT
+        
+      - name: OUTCOME_QUARTER
+        synonyms:
+          - "quarter"
+          - "fiscal quarter"
+        description: "Quarter of the year (1-4)"
+        data_type: NUMBER
+        
+      - name: ENGAGEMENT_LEVEL
+        synonyms:
+          - "engagement category"
+          - "interaction level"
+          - "engagement tier"
+        description: "Categorized engagement level: High, Medium, or Low based on scrolling and clicks"
+        data_type: TEXT
+        sample_values:
+          - "High"
+          - "Medium"
+          - "Low"
+
+    # ==========================================================================
+    # Time-Series Measures
+    # ==========================================================================
+    time_dimensions:
+      - name: OUTCOME_MONTH
+        synonyms:
+          - "month"
+          - "date"
+          - "time"
+        description: "Monthly time dimension for trend analysis"
+        data_type: DATE
+
+    # ==========================================================================
+    # Engagement Metrics (Measures)
+    # ==========================================================================
+    measures:
+      - name: TOTAL_INTERACTIONS
+        synonyms:
+          - "total interactions"
+          - "interaction count"
+          - "number of interactions"
+          - "engagement events"
+        description: "Total number of patient interactions with digital screens"
+        data_type: NUMBER
+        aggregation: SUM
+        
+      - name: UNIQUE_DEVICES
+        synonyms:
+          - "device count"
+          - "number of devices"
+          - "unique screens"
+        description: "Count of unique devices/screens used"
+        data_type: NUMBER
+        aggregation: SUM
+        
+      - name: AVG_DWELL_TIME_SEC
+        synonyms:
+          - "dwell time"
+          - "time spent"
+          - "viewing time"
+          - "engagement time"
+          - "screen time"
+        description: "Average time in seconds patients spent viewing content"
+        data_type: NUMBER
+        aggregation: AVG
+        
+      - name: AVG_CLICK_COUNT
+        synonyms:
+          - "clicks"
+          - "click count"
+          - "interactions"
+          - "number of clicks"
+          - "user clicks"
+        description: "Average number of clicks per interaction"
+        data_type: NUMBER
+        aggregation: AVG
+        
+      - name: AVG_SCROLL_DEPTH_PCT
+        synonyms:
+          - "scrolling"
+          - "scroll depth"
+          - "scroll percentage"
+          - "how far scrolled"
+          - "content consumption"
+          - "reading depth"
+        description: "Average percentage of content scrolled through (0-100%)"
+        data_type: NUMBER
+        aggregation: AVG
+        
+      - name: MAX_SCROLL_DEPTH_PCT
+        synonyms:
+          - "maximum scroll"
+          - "deepest scroll"
+          - "max scroll depth"
+        description: "Maximum scroll depth achieved"
+        data_type: NUMBER
+        aggregation: MAX
+        
+      - name: TOTAL_DWELL_TIME_SEC
+        synonyms:
+          - "total time spent"
+          - "cumulative time"
+          - "total viewing time"
+        description: "Total cumulative dwell time across all interactions"
+        data_type: NUMBER
+        aggregation: SUM
+        
+      - name: TOTAL_CLICKS
+        synonyms:
+          - "total clicks"
+          - "click volume"
+          - "cumulative clicks"
+        description: "Total number of clicks across all interactions"
+        data_type: NUMBER
+        aggregation: SUM
+        
+      - name: ENGAGEMENT_SCORE
+        synonyms:
+          - "engagement score"
+          - "engagement index"
+          - "interaction score"
+        description: "Composite engagement score calculated from scroll, clicks, and dwell time"
+        data_type: NUMBER
+        aggregation: AVG
+
+      # ==========================================================================
+      # Clinical Outcome Metrics (Measures)
+      # ==========================================================================
+      - name: VACCINES_ADMINISTERED
+        synonyms:
+          - "vaccines"
+          - "vaccinations"
+          - "shots"
+          - "immunizations"
+          - "vaccine count"
+          - "shots given"
+        description: "Number of vaccines administered to patients"
+        data_type: NUMBER
+        aggregation: SUM
+        
+      - name: SCREENINGS_COMPLETED
+        synonyms:
+          - "screenings"
+          - "preventative screenings"
+          - "health screenings"
+          - "screening tests"
+          - "preventive care"
+        description: "Number of preventative health screenings completed"
+        data_type: NUMBER
+        aggregation: SUM
+        
+      - name: APPOINTMENT_SHOW_RATE
+        synonyms:
+          - "show rate"
+          - "appointment adherence"
+          - "no-show rate"
+          - "attendance rate"
+          - "kept appointments"
+        description: "Rate of patients showing up for scheduled appointments (0.0-1.0)"
+        data_type: NUMBER
+        aggregation: AVG
+        
+      - name: VACCINES_PER_INTERACTION
+        synonyms:
+          - "vaccine efficiency"
+          - "vaccines per engagement"
+          - "vaccination rate"
+        description: "Number of vaccines administered per patient interaction"
+        data_type: NUMBER
+        aggregation: AVG
+        
+      - name: SCREENINGS_PER_INTERACTION
+        synonyms:
+          - "screening efficiency"
+          - "screenings per engagement"
+          - "screening rate"
+        description: "Number of screenings completed per patient interaction"
+        data_type: NUMBER
+        aggregation: AVG
+
+# ============================================================================
+# Verified Queries - Training Examples for Cortex Analyst
+# ============================================================================
+verified_queries:
+  - name: "Impact of Scrolling on Vaccinations"
+    question: "Did an increase in scrolling lead to more vaccines administered?"
+    sql: |
+      SELECT 
+        ENGAGEMENT_LEVEL,
+        ROUND(AVG(AVG_SCROLL_DEPTH_PCT), 2) AS AVG_SCROLL_DEPTH,
+        SUM(VACCINES_ADMINISTERED) AS TOTAL_VACCINES,
+        ROUND(AVG(VACCINES_ADMINISTERED), 2) AS AVG_VACCINES_PER_PROVIDER_MONTH
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY ENGAGEMENT_LEVEL
+      ORDER BY AVG_SCROLL_DEPTH DESC;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "Correlation Between Dwell Time and Screenings"
+    question: "Show the correlation between dwell time and preventative screenings"
+    sql: |
+      SELECT 
+        CASE 
+          WHEN AVG_DWELL_TIME_SEC < 90 THEN 'Low Dwell (<90s)'
+          WHEN AVG_DWELL_TIME_SEC < 180 THEN 'Medium Dwell (90-180s)'
+          ELSE 'High Dwell (>180s)'
+        END AS DWELL_TIME_CATEGORY,
+        COUNT(*) AS PROVIDER_MONTHS,
+        ROUND(AVG(AVG_DWELL_TIME_SEC), 2) AS AVG_DWELL_TIME,
+        SUM(SCREENINGS_COMPLETED) AS TOTAL_SCREENINGS,
+        ROUND(AVG(SCREENINGS_COMPLETED), 2) AS AVG_SCREENINGS
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY DWELL_TIME_CATEGORY
+      ORDER BY AVG_DWELL_TIME DESC;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "Content Topics and Appointment Show Rates"
+    question: "Which content topics drove the highest appointment show rates?"
+    sql: |
+      SELECT 
+        CASE 
+          WHEN HAS_APPOINTMENT_CONTENT = 1 THEN 'Appointment Reminders'
+          WHEN HAS_VACCINATION_CONTENT = 1 THEN 'Vaccination Content'
+          WHEN HAS_SCREENING_CONTENT = 1 THEN 'Screening Content'
+          ELSE 'Other Content'
+        END AS CONTENT_TYPE,
+        COUNT(*) AS PROVIDER_MONTHS,
+        ROUND(AVG(APPOINTMENT_SHOW_RATE), 3) AS AVG_SHOW_RATE,
+        ROUND(AVG(AVG_SCROLL_DEPTH_PCT), 2) AS AVG_ENGAGEMENT
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY CONTENT_TYPE
+      ORDER BY AVG_SHOW_RATE DESC;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "Provider Churn vs Engagement"
+    question: "What is the relationship between engagement levels and provider churn?"
+    sql: |
+      SELECT 
+        ENGAGEMENT_LEVEL,
+        COUNT(DISTINCT PROVIDER_NPI) AS TOTAL_PROVIDERS,
+        SUM(CASE WHEN PROVIDER_IS_ACTIVE = TRUE THEN 1 ELSE 0 END) AS ACTIVE_PROVIDERS,
+        SUM(CASE WHEN PROVIDER_IS_ACTIVE = FALSE THEN 1 ELSE 0 END) AS CHURNED_PROVIDERS,
+        ROUND(
+          SUM(CASE WHEN PROVIDER_IS_ACTIVE = TRUE THEN 1 ELSE 0 END) * 100.0 / COUNT(DISTINCT PROVIDER_NPI),
+          2
+        ) AS RETENTION_RATE_PCT
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY ENGAGEMENT_LEVEL
+      ORDER BY 
+        CASE ENGAGEMENT_LEVEL 
+          WHEN 'High' THEN 1 
+          WHEN 'Medium' THEN 2 
+          ELSE 3 
+        END;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "Monthly Trend Analysis"
+    question: "Show me the monthly trends in engagement and clinical outcomes"
+    sql: |
+      SELECT 
+        OUTCOME_MONTH,
+        OUTCOME_MONTH_NAME,
+        COUNT(DISTINCT PROVIDER_NPI) AS ACTIVE_PROVIDERS,
+        ROUND(AVG(AVG_SCROLL_DEPTH_PCT), 2) AS AVG_SCROLL_DEPTH,
+        ROUND(AVG(AVG_CLICK_COUNT), 2) AS AVG_CLICKS,
+        SUM(VACCINES_ADMINISTERED) AS TOTAL_VACCINES,
+        SUM(SCREENINGS_COMPLETED) AS TOTAL_SCREENINGS,
+        ROUND(AVG(APPOINTMENT_SHOW_RATE), 3) AS AVG_SHOW_RATE
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY OUTCOME_MONTH, OUTCOME_MONTH_NAME
+      ORDER BY OUTCOME_MONTH;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "Specialty Comparison"
+    question: "Compare clinical outcomes across different medical specialties"
+    sql: |
+      SELECT 
+        SPECIALTY,
+        COUNT(DISTINCT PROVIDER_NPI) AS PROVIDER_COUNT,
+        ROUND(AVG(AVG_SCROLL_DEPTH_PCT), 2) AS AVG_SCROLL_DEPTH,
+        SUM(VACCINES_ADMINISTERED) AS TOTAL_VACCINES,
+        SUM(SCREENINGS_COMPLETED) AS TOTAL_SCREENINGS,
+        ROUND(AVG(APPOINTMENT_SHOW_RATE), 3) AS AVG_SHOW_RATE
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY SPECIALTY
+      ORDER BY TOTAL_VACCINES DESC;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "High Engagement Impact"
+    question: "What outcomes do providers with high engagement achieve?"
+    sql: |
+      SELECT 
+        PROVIDER_NAME,
+        SPECIALTY,
+        REGION,
+        ROUND(AVG(AVG_SCROLL_DEPTH_PCT), 2) AS AVG_SCROLL_DEPTH,
+        ROUND(AVG(AVG_CLICK_COUNT), 2) AS AVG_CLICKS,
+        SUM(VACCINES_ADMINISTERED) AS TOTAL_VACCINES,
+        SUM(SCREENINGS_COMPLETED) AS TOTAL_SCREENINGS,
+        ROUND(AVG(APPOINTMENT_SHOW_RATE), 3) AS AVG_SHOW_RATE
+      FROM V_IMPACT_ANALYSIS
+      WHERE ENGAGEMENT_LEVEL = 'High'
+      GROUP BY PROVIDER_NAME, SPECIALTY, REGION
+      ORDER BY TOTAL_VACCINES DESC
+      LIMIT 10;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+    
+  - name: "Regional Performance"
+    question: "How do different regions compare in terms of engagement and outcomes?"
+    sql: |
+      SELECT 
+        REGION,
+        COUNT(DISTINCT PROVIDER_NPI) AS PROVIDER_COUNT,
+        ROUND(AVG(ENGAGEMENT_SCORE), 2) AS AVG_ENGAGEMENT_SCORE,
+        SUM(VACCINES_ADMINISTERED) AS TOTAL_VACCINES,
+        SUM(SCREENINGS_COMPLETED) AS TOTAL_SCREENINGS,
+        ROUND(AVG(APPOINTMENT_SHOW_RATE), 3) AS AVG_SHOW_RATE
+      FROM V_IMPACT_ANALYSIS
+      GROUP BY REGION
+      ORDER BY AVG_ENGAGEMENT_SCORE DESC;
+    verified_at: 2024-11-20
+    verified_by: "Solutions Architect"
+
+# ============================================================================
+# Relationships - Define foreign key relationships
+# ============================================================================
+relationships:
+  - name: "provider_to_impact"
+    left_table: PROVIDER_DIM
+    left_column: NPI
+    right_table: V_IMPACT_ANALYSIS
+    right_column: PROVIDER_NPI
+    relationship_type: one_to_many
+    description: "Each provider has multiple monthly impact records"
+
