@@ -25,58 +25,79 @@ GRANT CREATE AGENT ON SCHEMA PATIENTPOINT_DB.IXR_ANALYTICS TO ROLE ACCOUNTADMIN;
 GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE ACCOUNTADMIN;
 
 -- ============================================================================
--- Stage Setup for Semantic Model File
+-- Verify Semantic View for Cortex Analyst
+-- ============================================================================
+-- NOTE: Cortex Analyst uses the semantic view created in 04_setup_semantic_view.sql
+--       The analyst tool is configured through the Agent wizard UI (see below)
 -- ============================================================================
 
--- Create internal stage for the semantic model YAML
-CREATE STAGE IF NOT EXISTS SEMANTIC_MODEL_STAGE
-    ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
-    COMMENT = 'Stage for Cortex Analyst semantic model YAML file';
+-- Verify the semantic view exists before proceeding
+SHOW SEMANTIC VIEWS LIKE 'PATIENT_IMPACT_SEMANTIC_VIEW';
 
--- Upload the semantic model YAML file to stage
--- Note: After running this script, upload 04_semantic_model.yaml to this stage using:
--- 
--- Option 1 (SnowSQL):
---   PUT file:///path/to/04_semantic_model.yaml @SEMANTIC_MODEL_STAGE AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
---
--- Option 2 (Snowsight UI):
---   Navigate to: Databases → PATIENTPOINT_DB → IXR_ANALYTICS → Stages → SEMANTIC_MODEL_STAGE
---   Click "Upload Files" and select 04_semantic_model.yaml
-
--- Verify stage contents
-LIST @SEMANTIC_MODEL_STAGE;
+-- Confirm semantic view is accessible
+SELECT 
+    'PATIENT_IMPACT_SEMANTIC_VIEW' AS semantic_view_name,
+    'Ready for Cortex Analyst configuration' AS status
+FROM (SELECT 1) -- Dummy select
+WHERE EXISTS (
+    SELECT 1 FROM INFORMATION_SCHEMA.VIEWS 
+    WHERE TABLE_SCHEMA = 'IXR_ANALYTICS' 
+    AND TABLE_NAME = 'PATIENT_IMPACT_SEMANTIC_VIEW'
+);
 
 -- ============================================================================
--- Cortex Analyst Service Setup
+-- IMPORTANT: Cortex Analyst Configuration
 -- ============================================================================
-
--- Create Cortex Analyst service using the semantic model
--- Best Practice: Use descriptive names and specify warehouse for resource management
-CREATE OR REPLACE CORTEX ANALYST SERVICE PATIENT_IMPACT_ANALYST
-    SEMANTIC_MODEL_FILE = '@SEMANTIC_MODEL_STAGE/04_semantic_model.yaml'
-    WAREHOUSE = COMPUTE_WH
-    COMMENT = 'Cortex Analyst for Patient Point IXR engagement and clinical outcomes analysis';
-
--- Verify Analyst service creation
-SHOW CORTEX ANALYST SERVICES IN SCHEMA PATIENTPOINT_DB.IXR_ANALYTICS;
-
--- Test the analyst with a sample query (optional)
 /*
-SELECT SNOWFLAKE.CORTEX.COMPLETE_ANALYST(
-    'PATIENT_IMPACT_ANALYST',
-    'Did an increase in scrolling lead to more vaccines administered?'
-) AS response;
+There is NO SQL command to "create" a Cortex Analyst service.
+Instead, Cortex Analyst is configured when you create the Cortex Agent.
+
+CONFIGURATION STEPS (via Snowflake UI):
+1. Navigate to: Snowsight → AI & ML → Agents
+2. Click: "+ Agent" to create a new agent
+3. In the wizard, configure the Cortex Analyst tool:
+   - Tool Type: Cortex Analyst
+   - Semantic View: PATIENTPOINT_DB.IXR_ANALYTICS.PATIENT_IMPACT_SEMANTIC_VIEW
+   - Warehouse: COMPUTE_WH
+4. Continue with agent configuration (see below)
+
+Alternatively, you can use the CREATE CORTEX AGENT statement with the 
+CORTEX_ANALYST tool configuration (see Agent Creation section below).
 */
 
 -- ============================================================================
--- Cortex Agent Creation with Native Tools Configuration
+-- Cortex Agent Creation Instructions
 -- ============================================================================
--- Best Practice: Use Snowflake's native CREATE CORTEX AGENT syntax with tools
--- instead of custom Python UDFs for better integration with Snowflake Intelligence
+-- NOTE: Agent creation with Cortex Analyst + Semantic View is best done via
+--       the Snowflake UI wizard. Follow the steps below.
+-- ============================================================================
 
-CREATE OR REPLACE CORTEX AGENT PATIENT_IMPACT_AGENT
-    -- Agent Instructions: Define the agent's purpose and behavior
-    INSTRUCTIONS = '
+/*
+AGENT CREATION VIA SNOWFLAKE UI (Recommended):
+
+1. Navigate to: Snowsight → AI & ML → Agents
+2. Click: "+ Agent" button
+3. Configure the Agent:
+   - Name: PATIENT_IMPACT_AGENT
+   - Description: IXR Analytics Engine for analyzing digital engagement impact on clinical outcomes
+   - Warehouse: COMPUTE_WH
+
+4. Add Tool #1 - Cortex Analyst:
+   - Tool Type: Cortex Analyst
+   - Semantic View: PATIENTPOINT_DB.IXR_ANALYTICS.PATIENT_IMPACT_SEMANTIC_VIEW
+   - Description: Analyzes structured data on patient engagement and clinical outcomes
+   
+5. Add Tool #2 - Cortex Search:
+   - Tool Type: Cortex Search
+   - Search Service: PATIENTPOINT_DB.IXR_ANALYTICS.CONTENT_SEARCH_SVC
+   - Max Results: 10
+   - Description: Searches medical education content library
+
+6. Add Instructions:
+   Copy and paste the following into the Instructions field:
+*/
+
+/*
 You are the Patient Point IXR Analytics Engine, an expert AI assistant specialized in analyzing 
 the relationship between digital patient engagement and clinical healthcare outcomes.
 
@@ -105,71 +126,52 @@ RESPONSE STYLE:
 - Always be clear about what the data shows
 
 Remember: Your goal is to prove that high digital engagement leads to better clinical outcomes 
-and reduced provider churn.'
-    
-    -- Sample Questions: Guide users on what they can ask
-    SAMPLE_QUESTIONS = (
-        'Did an increase in scrolling lead to more vaccines administered?',
-        'Show the correlation between dwell time and preventative screenings',
-        'Which content topics drove the highest appointment show rates?',
-        'What is the relationship between engagement and provider churn?',
-        'Compare clinical outcomes across different medical specialties',
-        'Show me monthly trends in engagement and clinical outcomes',
-        'What content do we have about flu vaccines?',
-        'How do different regions compare in terms of engagement?',
-        'What outcomes do providers with high engagement achieve?',
-        'Which providers are at risk of churning based on engagement?'
-    )
-    
-    -- Tools Configuration: Define available tools for the agent
-    TOOLS = (
-        -- Tool 1: Cortex Analyst for structured data analysis
-        CORTEX_ANALYST(
-            SERVICE_NAME => 'PATIENT_IMPACT_ANALYST',
-            WAREHOUSE => 'COMPUTE_WH',
-            TIMEOUT => 300,  -- 5 minutes timeout for complex queries
-            DESCRIPTION => 'Analyzes structured data on patient engagement metrics and clinical outcomes. Use for quantitative questions about metrics, trends, and correlations.'
-        ),
-        
-        -- Tool 2: Cortex Search for unstructured content retrieval
-        CORTEX_SEARCH(
-            SERVICE_NAME => 'CONTENT_SEARCH_SVC',
-            MAX_RESULTS => 10,
-            DESCRIPTION => 'Searches medical education content library including videos, articles, and health guidance. Use for questions about content topics and recommendations.'
-        )
-    )
-    
-    -- Warehouse for agent execution
-    WAREHOUSE = COMPUTE_WH
-    
-    -- Metadata
-    COMMENT = 'IXR Analytics Engine: AI agent for analyzing digital engagement impact on clinical outcomes';
+and reduced provider churn.
+*/
+
+/*
+7. Add Sample Questions (in the wizard):
+   - "Did an increase in scrolling lead to more vaccines administered?"
+   - "Show the correlation between dwell time and preventative screenings"
+   - "Which content topics drove the highest appointment show rates?"
+   - "What is the relationship between engagement and provider churn?"
+   - "Compare clinical outcomes across different medical specialties"
+   - "Show me monthly trends in engagement and clinical outcomes"
+   - "What content do we have about flu vaccines?"
+   - "How do different regions compare in terms of engagement?"
+   - "What outcomes do providers with high engagement achieve?"
+   - "Which providers are at risk of churning based on engagement?"
+
+8. Click "Create Agent"
+9. Test the agent with sample questions
+*/
 
 -- ============================================================================
--- Verify Agent Creation
+-- Verify Agent Creation (After Creating in UI)
 -- ============================================================================
 
+-- After creating the agent in the UI, verify it exists:
 SHOW CORTEX AGENTS IN SCHEMA PATIENTPOINT_DB.IXR_ANALYTICS;
 
--- Describe the agent to see configuration
-DESC CORTEX AGENT PATIENT_IMPACT_AGENT;
+-- View agent configuration details:
+-- DESC CORTEX AGENT PATIENT_IMPACT_AGENT;
 
 -- ============================================================================
 -- Access Control and Security (Best Practices)
 -- ============================================================================
 
--- Grant agent usage to SYSADMIN role
-GRANT USAGE ON CORTEX AGENT PATIENT_IMPACT_AGENT TO ROLE SYSADMIN;
-GRANT USAGE ON CORTEX ANALYST SERVICE PATIENT_IMPACT_ANALYST TO ROLE SYSADMIN;
+-- Grant agent usage to other roles as needed
+-- GRANT USAGE ON CORTEX AGENT PATIENT_IMPACT_AGENT TO ROLE SYSADMIN;
 
--- Grant access to underlying data objects
+-- Grant access to underlying data objects for the agent
 GRANT USAGE ON DATABASE PATIENTPOINT_DB TO ROLE SYSADMIN;
 GRANT USAGE ON SCHEMA PATIENTPOINT_DB.IXR_ANALYTICS TO ROLE SYSADMIN;
 GRANT SELECT ON ALL TABLES IN SCHEMA PATIENTPOINT_DB.IXR_ANALYTICS TO ROLE SYSADMIN;
 GRANT SELECT ON ALL VIEWS IN SCHEMA PATIENTPOINT_DB.IXR_ANALYTICS TO ROLE SYSADMIN;
+GRANT USAGE ON SEMANTIC VIEW PATIENT_IMPACT_SEMANTIC_VIEW TO ROLE SYSADMIN;
 
--- Optional: Grant MONITOR privilege to track agent performance
-GRANT MONITOR ON CORTEX AGENT PATIENT_IMPACT_AGENT TO ROLE SYSADMIN;
+-- Grant access to search service
+-- GRANT USAGE ON CORTEX SEARCH SERVICE CONTENT_SEARCH_SVC TO ROLE SYSADMIN;
 
 -- Best Practice: Revoke broad access if too permissive
 -- REVOKE DATABASE ROLE SNOWFLAKE.CORTEX_USER FROM ROLE PUBLIC;
@@ -179,28 +181,27 @@ GRANT MONITOR ON CORTEX AGENT PATIENT_IMPACT_AGENT TO ROLE SYSADMIN;
 -- ============================================================================
 -- Note: The agent can be accessed via Snowflake Intelligence UI or programmatically
 
--- Test 1: Analytical query about engagement impact
 /*
+TESTING THE AGENT:
+
+Method 1 - Snowflake Intelligence UI (Recommended):
+1. Navigate to: AI & ML → Agents
+2. Click on: PATIENT_IMPACT_AGENT
+3. Click: "Open in Intelligence"
+4. Start asking questions from the sample questions list
+
+Method 2 - SQL (if agent was created with proper permissions):
 SELECT SNOWFLAKE.CORTEX.COMPLETE(
     'PATIENT_IMPACT_AGENT',
     'Did an increase in scrolling lead to more vaccines administered?'
 ) AS response;
-*/
 
--- Test 2: Content search query
-/*
-SELECT SNOWFLAKE.CORTEX.COMPLETE(
-    'PATIENT_IMPACT_AGENT',
-    'What content do we have about flu vaccines?'
-) AS response;
-*/
-
--- Test 3: Combined analytical and content query
-/*
-SELECT SNOWFLAKE.CORTEX.COMPLETE(
-    'PATIENT_IMPACT_AGENT',
-    'Which content topics drove the highest vaccination rates?'
-) AS response;
+Sample Test Questions:
+- "Did an increase in scrolling lead to more vaccines administered?"
+- "What content do we have about flu vaccines?"
+- "Which content topics drove the highest vaccination rates?"
+- "Show the correlation between dwell time and preventative screenings"
+- "Compare clinical outcomes across different medical specialties"
 */
 
 -- ============================================================================
@@ -216,7 +217,9 @@ SELECT SNOWFLAKE.CORTEX.COMPLETE(
 -- ============================================================================
 -- Helper Functions for Programmatic Access (Optional)
 -- ============================================================================
+-- Note: These functions can be created after the agent exists in your schema
 
+/*
 -- Function to create a conversation thread
 CREATE OR REPLACE FUNCTION CREATE_AGENT_THREAD()
 RETURNS VARCHAR
@@ -236,6 +239,7 @@ AS $$
         user_message
     )
 $$;
+*/
 
 -- ============================================================================
 -- Integration with Snowflake Intelligence
@@ -350,10 +354,11 @@ ISSUE: "Permission denied" errors
 SOLUTION: Check role grants:
   GRANT USAGE ON CORTEX AGENT PATIENT_IMPACT_AGENT TO ROLE <your_role>;
 
-ISSUE: Semantic model file not found
-SOLUTION: Verify file upload:
-  LIST @SEMANTIC_MODEL_STAGE;
-  -- Ensure 04_semantic_model.yaml is present
+ISSUE: Semantic view not found when creating agent
+SOLUTION: Verify semantic view exists:
+  SHOW SEMANTIC VIEWS LIKE 'PATIENT_IMPACT_SEMANTIC_VIEW';
+  -- If not found, run 04_setup_semantic_view.sql first
+  -- Ensure you select the correct database.schema path in the UI wizard
 
 ISSUE: Slow response times
 SOLUTION: 
@@ -398,9 +403,9 @@ FUTURE ENHANCEMENTS:
   6. Create specialized agents for different user personas (executives, clinicians, analysts)
 */
 
-SELECT '✓ Cortex Agent created successfully with native tools configuration.' AS STATUS;
-SELECT '✓ Agent follows Snowflake best practices for enterprise deployment.' AS BEST_PRACTICES;
-SELECT '✓ Ready for use in Snowflake Intelligence or custom applications.' AS INTEGRATION;
+SELECT '✓ Prerequisites completed. Semantic view ready for Cortex Analyst.' AS STATUS;
+SELECT '✓ Ready to create agent via Snowflake UI (AI & ML → Agents → + Agent)' AS NEXT_STEP;
+SELECT '✓ Follow UI wizard instructions above to complete agent setup.' AS INSTRUCTIONS;
 
 -- ============================================================================
 -- Quick Reference: Sample Questions by Category

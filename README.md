@@ -158,34 +158,49 @@ Execute the following files **in order**:
    -- Copy and execute entire 03_setup_search.sql
    ```
 
-#### 4. **04_semantic_model.yaml**
-   - Upload to Snowflake stage
-   - Defines semantic layer for Cortex Analyst
+#### 4. **04_setup_semantic_view.sql**
+   - Creates native Snowflake semantic view (replaces YAML approach)
+   - Defines semantic layer for natural language queries
+   - No file upload required - pure SQL approach
+   - **Runtime:** ~1 minute
    
-   ```bash
-   # Upload via SnowSQL or Snowflake UI
-   PUT file:///path/to/04_semantic_model.yaml @PATIENTPOINT_DB.IXR_ANALYTICS.SEMANTIC_MODEL_STAGE AUTO_COMPRESS=FALSE;
+   ```sql
+   -- Run in Snowflake Worksheet
+   -- Copy and execute entire 04_setup_semantic_view.sql
    ```
    
-   Or via Snowflake UI:
-   - Navigate to: Databases → PATIENTPOINT_DB → IXR_ANALYTICS → Stages → SEMANTIC_MODEL_STAGE
-   - Click "Upload Files" and select `04_semantic_model.yaml`
+   **Benefits over YAML:**
+   - ✅ No file management or stage uploads
+   - ✅ Version controlled through SQL scripts
+   - ✅ Native Snowflake object with full DDL support
+   - ✅ Better integration with Snowflake Intelligence
+   - ✅ Easier to update and maintain
 
 #### 5. **05_agent_setup.sql**
    - Grants CORTEX_AGENT_USER role (prerequisite)
-   - Creates Cortex Analyst Service: `PATIENT_IMPACT_ANALYST`
-   - Creates Cortex Agent: `PATIENT_IMPACT_AGENT` with native tools
-   - Configures dual-tool orchestration (Analyst + Search)
-   - **Follows Snowflake best practices** for enterprise deployment
-   - **Runtime:** ~2-3 minutes
+   - Verifies semantic view is ready for Cortex Analyst
+   - Provides instructions for creating agent via Snowflake UI
+   - **Runtime:** ~1 minute for prerequisites
    
    ```sql
    -- Run in Snowflake Worksheet
    -- Copy and execute entire 05_agent_setup.sql
    ```
    
-   **Note:** The agent can be accessed via:
-   - **Snowflake Intelligence** (AI & ML → Agents)
+   **Then create the agent via UI:**
+   1. Navigate to: Snowsight → AI & ML → Agents
+   2. Click: "+ Agent"
+   3. Configure:
+      - **Name:** PATIENT_IMPACT_AGENT
+      - **Warehouse:** COMPUTE_WH
+      - **Tool 1:** Cortex Analyst → Select semantic view: `PATIENT_IMPACT_SEMANTIC_VIEW`
+      - **Tool 2:** Cortex Search → Select search service: `CONTENT_SEARCH_SVC`
+      - **Instructions:** Copy from 05_agent_setup.sql (provided in comments)
+      - **Sample Questions:** Add suggested questions from script
+   4. Click: "Create Agent"
+   
+   **Access the agent via:**
+   - **Snowflake Intelligence** (AI & ML → Agents → Open in Intelligence)
    - **Streamlit App** (custom UI, see step 6)
    - **REST API** (for custom applications)
 
@@ -357,7 +372,8 @@ This PoC provides:
 
 - **Zero-ETL Architecture:** All processing in Snowflake
 - **AI-Native:** Leverages Cortex AI for natural language understanding
-- **Semantic Layer:** Business-friendly terminology (e.g., "scrolling" → `SCROLL_DEPTH_PCT`)
+- **Native Semantic Views:** Business-friendly terminology using SQL (e.g., "scrolling" → `SCROLL_DEPTH_PCT`)
+- **No YAML Required:** Pure SQL approach - no file uploads or stage management
 - **Dual-Tool Orchestration:** Native Cortex Agent with Analyst + Search tools
 - **Best Practices Compliant:** Follows official Snowflake Cortex Agent documentation
 - **Snowflake Intelligence Ready:** Works seamlessly with native AI interface
@@ -372,10 +388,11 @@ This PoC provides:
 **Issue:** Cortex services not available  
 **Solution:** Ensure Cortex AI is enabled in your Snowflake account. Contact Snowflake support if needed.
 
-**Issue:** Semantic model file not found  
-**Solution:** Verify YAML file uploaded to stage:
+**Issue:** Semantic view not found  
+**Solution:** Verify semantic view was created:
 ```sql
-LIST @SEMANTIC_MODEL_STAGE;
+SHOW SEMANTIC VIEWS LIKE 'PATIENT_IMPACT_SEMANTIC_VIEW';
+-- If not found, re-run 04_setup_semantic_view.sql
 ```
 
 **Issue:** Agent returns errors  
